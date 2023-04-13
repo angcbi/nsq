@@ -250,6 +250,7 @@ func (n *NSQD) Main() error {
 	}
 
 	n.waitGroup.Wrap(func() {
+		// go程 创建TCP Server
 		exitFunc(protocol.TCPServer(n.tcpListener, n.tcpServer, n.logf))
 	})
 	if n.httpListener != nil {

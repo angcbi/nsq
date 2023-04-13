@@ -49,7 +49,11 @@ func (p *protocolV2) IOLoop(c protocol.Client) error {
 	// and avoid a potential race with IDENTIFY (where a client
 	// could have changed or disabled said attributes)
 	messagePumpStartedChan := make(chan bool)
+
+	// channel中的消息，发送给消费者
 	go p.messagePump(client, messagePumpStartedChan)
+
+	// 等待操作
 	<-messagePumpStartedChan
 
 	for {
@@ -327,6 +331,7 @@ func (p *protocolV2) messagePump(client *clientV2, startedChan chan bool) {
 
 			subChannel.StartInFlightTimeout(msg, client.ID, msgTimeout)
 			client.SendingMessage()
+			// 通过TCP推送消息
 			err = p.SendMessage(client, msg)
 			if err != nil {
 				goto exit
@@ -769,6 +774,7 @@ func (p *protocolV2) PUB(client *clientV2, params [][]byte) ([]byte, error) {
 		return nil, protocol.NewFatalClientErr(nil, "E_INVALID", "PUB insufficient number of parameters")
 	}
 
+	//PUB协议的内容
 	topicName := string(params[1])
 	if !protocol.IsValidTopicName(topicName) {
 		return nil, protocol.NewFatalClientErr(nil, "E_BAD_TOPIC",
@@ -791,6 +797,8 @@ func (p *protocolV2) PUB(client *clientV2, params [][]byte) ([]byte, error) {
 	}
 
 	messageBody := make([]byte, bodyLen)
+
+	// ReadFull 读取指定字节的数据
 	_, err = io.ReadFull(client.Reader, messageBody)
 	if err != nil {
 		return nil, protocol.NewFatalClientErr(err, "E_BAD_MESSAGE", "PUB failed to read message body")
@@ -800,8 +808,12 @@ func (p *protocolV2) PUB(client *clientV2, params [][]byte) ([]byte, error) {
 		return nil, err
 	}
 
+	// 获取topic， 不存在就创建
 	topic := p.nsqd.GetTopic(topicName)
+	// 雪花算法 生成msgID
 	msg := NewMessage(topic.GenerateID(), messageBody)
+
+	// 推送消息，放到MemMsgChannel或者DiskQueue
 	err = topic.PutMessage(msg)
 	if err != nil {
 		return nil, protocol.NewFatalClientErr(err, "E_PUB_FAILED", "PUB failed "+err.Error())

@@ -24,6 +24,7 @@ type program struct {
 }
 
 func main() {
+	// go-svc Init Start Stop
 	prg := &program{}
 	if err := svc.Run(prg, syscall.SIGINT, syscall.SIGTERM); err != nil {
 		logFatal("%s", err)
@@ -31,6 +32,7 @@ func main() {
 }
 
 func (p *program) Init(env svc.Environment) error {
+	// 解析参数并校验，实例化Nsqd
 	opts := nsqd.NewOptions()
 
 	flagSet := nsqdFlagSet(opts)

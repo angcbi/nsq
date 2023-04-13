@@ -76,6 +76,7 @@ func NewTopic(topicName string, nsqd *NSQD, deleteCallback func(*Topic)) *Topic 
 		)
 	}
 
+	// 创建新的goroutine, 发送消息给*Channel
 	t.waitGroup.Wrap(t.messagePump)
 
 	t.nsqd.Notify(t, !t.ephemeral)
@@ -255,6 +256,7 @@ func (t *Topic) messagePump() {
 	var backendChan <-chan []byte
 
 	// do not pass messages before Start(), but avoid blocking Pause() or GetChannel()
+	// 等待topic start
 	for {
 		select {
 		case <-t.channelUpdateChan:
@@ -287,6 +289,7 @@ func (t *Topic) messagePump() {
 				t.nsqd.logf(LOG_ERROR, "failed to decode message - %s", err)
 				continue
 			}
+		// 升级时，重新获取channels
 		case <-t.channelUpdateChan:
 			chans = chans[:0]
 			t.RLock()
@@ -315,12 +318,15 @@ func (t *Topic) messagePump() {
 			goto exit
 		}
 
+		// 把消息推送给topic下的每个channel
 		for i, channel := range chans {
 			chanMsg := msg
 			// copy the message because each channel
 			// needs a unique instance but...
 			// fastpath to avoid copy if its the first channel
 			// (the topic already created the first copy)
+
+			//如果有多个channel，复制Message
 			if i > 0 {
 				chanMsg = NewMessage(msg.ID, msg.Body)
 				chanMsg.Timestamp = msg.Timestamp
@@ -330,6 +336,7 @@ func (t *Topic) messagePump() {
 				channel.PutMessageDeferred(chanMsg, chanMsg.deferred)
 				continue
 			}
+			// 写入channel的MemMsgChannel或backend
 			err := channel.PutMessage(chanMsg)
 			if err != nil {
 				t.nsqd.logf(LOG_ERROR,

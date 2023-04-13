@@ -38,6 +38,7 @@ func TCPServer(listener net.Listener, handler TCPHandler, logf lg.AppLogFunc) er
 
 		wg.Add(1)
 		go func() {
+			// TCPServer 实现了接口
 			handler.Handle(clientConn)
 			wg.Done()
 		}()
