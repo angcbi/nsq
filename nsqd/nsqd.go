@@ -249,16 +249,20 @@ func (n *NSQD) Main() error {
 		})
 	}
 
+	// TCP
 	n.waitGroup.Wrap(func() {
 		// go程 创建TCP Server
 		exitFunc(protocol.TCPServer(n.tcpListener, n.tcpServer, n.logf))
 	})
+	// HTTP
 	if n.httpListener != nil {
 		httpServer := newHTTPServer(n, false, n.getOpts().TLSRequired == TLSRequired)
 		n.waitGroup.Wrap(func() {
 			exitFunc(http_api.Serve(n.httpListener, httpServer, "HTTP", n.logf))
 		})
 	}
+
+	// HTTPS
 	if n.httpsListener != nil {
 		httpsServer := newHTTPServer(n, true, true)
 		n.waitGroup.Wrap(func() {
@@ -266,7 +270,10 @@ func (n *NSQD) Main() error {
 		})
 	}
 
+	// 扫描延时队列和未确认队列
 	n.waitGroup.Wrap(n.queueScanLoop)
+
+	// lookup相关
 	n.waitGroup.Wrap(n.lookupLoop)
 	if n.getOpts().StatsdAddress != "" {
 		n.waitGroup.Wrap(n.statsdLoop)
@@ -657,6 +664,9 @@ func (n *NSQD) queueScanWorker(workCh chan *Channel, responseCh chan bool, close
 //
 // If QueueScanDirtyPercent (default: 25%) of the selected channels were dirty,
 // the loop continues without sleep.
+
+// 默认最大并发4个
+// 扫描间隔100ms 随机选择20个channels 从一个5s刷新一次的缓存列表
 func (n *NSQD) queueScanLoop() {
 	workCh := make(chan *Channel, n.getOpts().QueueScanSelectionCount)
 	responseCh := make(chan bool, n.getOpts().QueueScanSelectionCount)

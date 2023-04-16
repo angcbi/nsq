@@ -329,6 +329,7 @@ func (p *protocolV2) messagePump(client *clientV2, startedChan chan bool) {
 			}
 			msg.Attempts++
 
+			// 放入已发送未确认队列
 			subChannel.StartInFlightTimeout(msg, client.ID, msgTimeout)
 			client.SendingMessage()
 			// 通过TCP推送消息
@@ -695,6 +696,7 @@ func (p *protocolV2) FIN(client *clientV2, params [][]byte) ([]byte, error) {
 		return nil, protocol.NewFatalClientErr(nil, "E_INVALID", err.Error())
 	}
 
+	// 处理客户端传来的确认消息
 	err = client.Channel.FinishMessage(client.ID, *id)
 	if err != nil {
 		return nil, protocol.NewClientErr(err, "E_FIN_FAILED",
@@ -742,6 +744,7 @@ func (p *protocolV2) REQ(client *clientV2, params [][]byte) ([]byte, error) {
 		timeoutDuration = clampedTimeout
 	}
 
+	// 重新入队，timeoutDuration=0 立即入队，否则延时timeoutDuration后入队
 	err = client.Channel.RequeueMessage(client.ID, *id, timeoutDuration)
 	if err != nil {
 		return nil, protocol.NewClientErr(err, "E_REQ_FAILED",

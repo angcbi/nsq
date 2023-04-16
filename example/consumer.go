@@ -39,7 +39,8 @@ func main() {
 
 	// Use nsqlookupd to discover nsqd instances.
 	// See also ConnectToNSQD, ConnectToNSQDs, ConnectToNSQLookupds.
-	err = consumer.ConnectToNSQD("localhost:4150")
+	//err = consumer.ConnectToNSQD("localhost:4150")
+	err = consumer.ConnectToNSQLookupd("localhost:4161")
 	if err != nil {
 		log.Fatal(err)
 	}

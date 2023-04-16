@@ -63,9 +63,15 @@ type Channel struct {
 	e2eProcessingLatencyStream *quantile.Quantile
 
 	// TODO: these can be DRYd up
+	// 延时消息
+	// 优先级队列，最小堆实现
+	//在实际的项目中Priority字段存的是时间戳，比如说5分钟之后投递本条消息，则Priority字段存的就是5分钟之后的时间戳。而PeekAndShift(max int64)中max值就是当前时间，如果队列中的根部元素大于当前时间戳max的值，则说明队列中没有可以投递的消息，故返回nil。如果小于等于，则根部元素存放的消息可以投递，就是就返回并移除该根部元素。
 	deferredMessages map[MessageID]*pqueue.Item
 	deferredPQ       pqueue.PriorityQueue
 	deferredMutex    sync.Mutex
+
+	// 已接收未确认的消息
+	// inFlightPQ 最小堆实现的优先级队列，
 	inFlightMessages map[MessageID]*Message
 	inFlightPQ       inFlightPqueue
 	inFlightMutex    sync.Mutex
@@ -95,6 +101,7 @@ func NewChannel(topicName string, channelName string, nsqd *NSQD,
 		)
 	}
 
+	// 创建队列
 	c.initPQ()
 
 	if c.ephemeral {

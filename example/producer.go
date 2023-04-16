@@ -10,7 +10,7 @@ import (
 func main() {
 	// Instantiate a producer.
 	config := nsq.NewConfig()
-	producer, err := nsq.NewProducer("127.0.0.1:4150", config)
+	producer, err := nsq.NewProducer("127.0.0.1:5000", config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Millisecond * 2)
 	}
 
 
